@@ -1,0 +1,14 @@
+{
+  "name": "talenthunt",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Pull the top matching candidate profiles for a job, scored by AI",
+  "engines": {
+    "node": ">=20.12"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test"
+  }
+}

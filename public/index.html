@@ -1,0 +1,694 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TalentHunt</title>
+<style>
+  :root {
+    --bg:#f4f6fa; --card:#fff; --text:#1a2133; --muted:#667085; --border:#e3e7ee; --primary:#3558d8; --primary-soft:#eaf0ff;
+    --accent:#d97757; --success:#12805c; --success-soft:#e3f6ee; --warning:#b54708; --warning-soft:#fff3e0; --danger:#d92d20; --danger-soft:#fde9e7;
+    --nav-h:72px; --grad:linear-gradient(110deg,#2f4fc4 0%,#3d63de 52%,#6560e6 100%); --head:linear-gradient(110deg,#2f4fc4 0%,#3d63de 50%,#6560e6 100%); --accent-soft:#fcebe4;
+    --shadow:0 1px 2px rgba(16,24,40,.05); --shadow-hover:0 4px 14px rgba(16,24,40,.09);
+  }
+  @media (prefers-color-scheme: dark) { :root {
+    --bg:#10131a; --card:#191d27; --text:#e8eaf0; --muted:#98a2b3; --border:#2a3040; --primary:#8aa0f0; --primary-soft:#1c2858;
+    --accent:#e8946f; --success:#4cc9a0; --success-soft:#143a2e; --warning:#f6b15d; --warning-soft:#40300f; --danger:#ff7a6e; --danger-soft:#47201c;
+    --accent-soft:#3a2a24; --grad:linear-gradient(110deg,#142580 0%,#2438a8 52%,#46379f 100%); --head:linear-gradient(110deg,#080f2e 0%,#0f1b57 50%,#211a58 100%);
+    --shadow:none; --shadow-hover:0 4px 14px rgba(0,0,0,.35);
+  } }
+  * { box-sizing: border-box; }
+  [hidden] { display:none !important; }
+  html, body { height:100%; }
+  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; overflow:hidden; }
+  :focus-visible { outline:2px solid var(--primary); outline-offset:2px; }
+
+  /* Both columns scroll on their own with the scrollbar hidden, so left and right behave identically. */
+  .scroll { overflow-y:auto; scrollbar-width:none; -ms-overflow-style:none; overscroll-behavior:contain; }
+  .scroll::-webkit-scrollbar { display:none; width:0; height:0; }
+
+  .nav { position:fixed; inset:0 0 auto 0; height:var(--nav-h); z-index:20; padding-top:10px; pointer-events:none; }
+  .nav-bar { pointer-events:auto; position:relative; overflow:hidden; height:54px; width:min(100% - 48px, 1392px); margin:0 auto; padding:0 20px;
+    display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:16px; border-radius:16px; color:#fff;
+    background:var(--head); box-shadow:0 8px 22px color-mix(in srgb, #3558d8 24%, transparent); }
+  /* soft light pools give the banner some depth */
+  .nav-bar::before { content:""; position:absolute; inset:0; pointer-events:none;
+    background:radial-gradient(520px 130px at 18% -55%, rgba(255,255,255,.20), transparent 70%), radial-gradient(460px 150px at 88% 160%, rgba(255,255,255,.12), transparent 70%); }
+  .brand { position:relative; display:flex; align-items:center; gap:14px; justify-self:center; }
+  .mark { position:relative; width:44px; height:44px; border-radius:14px; display:grid; place-items:center; color:#fff; flex:none;
+    background:linear-gradient(145deg, rgba(255,255,255,.20), rgba(255,255,255,.07)); border:1px solid rgba(255,255,255,.30);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.45), 0 4px 14px rgba(8,20,80,.28); }
+  .mark svg { width:28px; height:28px; }
+  .mark.busy svg { animation:spin 2.6s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .mark.busy { animation:ring 1.3s ease-out infinite; }
+  @keyframes ring { 0% { box-shadow:inset 0 1px 0 rgba(255,255,255,.45), 0 0 0 0 rgba(255,255,255,.55); } 100% { box-shadow:inset 0 1px 0 rgba(255,255,255,.45), 0 0 0 14px rgba(255,255,255,0); } }
+  @media (prefers-reduced-motion: reduce) { .mark.busy, .mark.busy svg { animation:none; } }
+  .brand b { font-size:28px; font-weight:800; letter-spacing:-.025em; line-height:1; text-shadow:0 2px 14px rgba(8,20,80,.35); }
+  .brand b span { font-weight:inherit; opacity:1; }
+  .nav-right { position:relative; justify-self:end; }
+  .pill { font-size:12.5px; font-weight:600; color:#fff; background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.24); padding:5px 14px; border-radius:99px; white-space:nowrap; -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); }
+
+  .shell { display:grid; grid-template-columns:372px minmax(0,1fr); max-width:1440px; margin:0 auto; padding-top:var(--nav-h); height:100vh; }
+  /* Each column is a fixed panel exactly as tall as the screen below the navbar. Only its content scrolls. */
+  aside, main { height:calc(100vh - var(--nav-h)); height:calc(100dvh - var(--nav-h)); min-height:0; overflow:hidden; display:flex; flex-direction:column; }
+  aside { padding:4px 12px 16px 24px; gap:12px; }
+  main { padding:4px 24px 16px 12px; }
+  .side-scroll { flex:1; min-height:0; padding:0 0 4px; }
+  .side-inner { display:flex; flex-direction:column; gap:14px; }
+  .side-foot { flex:none; display:flex; gap:8px; }
+  .side-foot #go { flex:1; padding:12px; font-size:15px; background:var(--grad); box-shadow:0 6px 16px color-mix(in srgb, var(--primary) 32%, transparent); }
+  .side-foot .ghost { padding:12px 18px; font-size:15px; }
+  .main-inner { flex:1; min-height:0; width:100%; display:flex; flex-direction:column; }
+  .main-scroll { flex:1; min-height:0; }
+  #results { display:flex; flex-direction:column; min-height:100%; }
+  #results > * { flex:none; }
+  #results > .empty { flex:1; }
+
+  .panel { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:16px; display:flex; flex-direction:column; gap:12px; box-shadow:var(--shadow); }
+  .ph { display:flex; align-items:center; gap:8px; }
+  .ph .ico { width:26px; height:26px; border-radius:8px; display:grid; place-items:center; background:var(--grad); color:#fff; font-size:13px; flex:none; box-shadow:0 3px 8px color-mix(in srgb, var(--primary) 30%, transparent); }
+  .panel h2 { margin:0; font-size:13.5px; font-weight:650; letter-spacing:0; text-transform:none; color:var(--text); }
+  .or { display:flex; align-items:center; gap:10px; color:var(--muted); font-size:12px; margin:-2px 0; }
+  .or::before, .or::after { content:""; flex:1; height:1px; background:var(--border); }
+  .row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .pair { display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:8px; }
+  .pair i { color:var(--muted); font-style:normal; }
+  .f { display:flex; flex-direction:column; gap:5px; min-width:0; }
+  label { font-size:12px; font-weight:550; color:var(--muted); }
+  input[type=text], input[type=number], input:not([type]), select, textarea { padding:9px 11px; border:1px solid var(--border); border-radius:9px; background:var(--bg); color:var(--text); font:inherit; font-size:14px; width:100%; transition:border-color .12s, box-shadow .12s; }
+  input:focus, select:focus, textarea:focus { outline:none; border-color:var(--primary); box-shadow:0 0 0 3px var(--primary-soft); }
+  textarea { resize:vertical; min-height:84px; }
+  .match { display:grid; grid-template-columns:84px 1fr; gap:12px; align-items:start; }
+  .slider { display:flex; flex-direction:column; gap:5px; }
+  .slider .lab { display:flex; justify-content:space-between; }
+  .slider output { color:var(--primary); font-weight:700; font-size:12px; }
+  input[type=range] { width:100%; accent-color:var(--primary); margin:7px 0; }
+  button { padding:10px 14px; border:0; border-radius:9px; background:var(--primary); color:#fff; font:inherit; font-weight:600; cursor:pointer; transition:filter .12s, background .12s; }
+  button:hover:not(:disabled) { filter:brightness(1.07); }
+  button:disabled { opacity:.55; cursor:wait; }
+  button.soft { background:var(--primary-soft); color:var(--primary); }
+  button.ghost { background:transparent; color:var(--text); border:1px solid var(--border); font-weight:500; padding:6px 12px; font-size:13px; }
+  button.ghost:hover:not(:disabled) { background:var(--bg); filter:none; }
+  #status { color:var(--muted); font-size:14px; margin-bottom:10px; }
+  #status:empty { display:none; }
+  #status.err { color:var(--danger); }
+  .empty { color:var(--muted); background:var(--card); border:1px dashed var(--border); border-radius:16px; padding:32px 24px; text-align:center; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; min-height:260px; }
+  .empty .art { width:64px; height:64px; border-radius:18px; display:grid; place-items:center; font-size:38px; line-height:1; color:#fff; background:var(--grad); box-shadow:0 10px 26px color-mix(in srgb, var(--primary) 38%, transparent); margin-bottom:6px; }
+  .empty h3 { margin:0; font-size:20px; color:var(--text); }
+  .empty p { margin:0; max-width:460px; }
+  .steps { list-style:none; margin:14px 0 0; padding:0; display:flex; gap:12px; flex-wrap:wrap; justify-content:center; }
+  .steps li { display:flex; align-items:center; gap:9px; text-align:left; font-size:13.5px; color:var(--text); background:var(--bg); border:1px solid var(--border); border-radius:12px; padding:9px 13px; max-width:230px; }
+  .steps b { flex:none; width:22px; height:22px; border-radius:50%; display:grid; place-items:center; background:var(--primary-soft); color:var(--primary); font-size:12px; }
+
+  .loader { display:flex; align-items:center; gap:14px; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px 20px; margin:0 0 12px; box-shadow:var(--shadow); }
+  .loader.below { margin:12px 0 0; }
+  .loader .glyph { font-size:26px; line-height:1; color:var(--accent); width:30px; text-align:center; flex:none; }
+  .loader .msg { font-size:16px; }
+  .loader .secs { color:var(--muted); font-size:13px; margin-left:6px; }
+  .loader .detail { display:block; color:var(--muted); font-size:13px; margin-top:2px; }
+  .loader .detail:empty { display:none; }
+
+  .toolbar { position:sticky; top:0; z-index:3; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; padding:2px 0 12px; background:var(--bg); }
+  .seg { display:inline-flex; background:var(--card); border:1px solid var(--border); border-radius:10px; padding:3px; gap:2px; }
+  .seg button { background:transparent; color:var(--muted); font-weight:500; padding:5px 12px; font-size:13px; border-radius:7px; }
+  .seg button[aria-pressed=true] { background:var(--primary-soft); color:var(--primary); font-weight:600; }
+  .seg button:hover:not(:disabled) { filter:none; color:var(--text); }
+  .tools { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--muted); }
+  .linkbtn { background:none; border:0; padding:0; color:var(--primary); font-weight:500; font-size:13px; cursor:pointer; text-decoration:underline; }
+
+  .card { background:var(--card); border:1px solid var(--border); border-left:4px solid var(--border); border-radius:14px; padding:16px; margin-bottom:10px; display:flex; gap:14px; box-shadow:var(--shadow); transition:box-shadow .15s, opacity .2s; }
+  .card:hover { box-shadow:var(--shadow-hover); }
+  .card.is-reviewed { border-left-color:var(--success); opacity:.78; }
+  .card.is-new { animation:pop .6s ease-out; border-left-color:var(--primary); }
+  @keyframes pop { from { background:var(--primary-soft); } to { background:var(--card); } }
+  @media (prefers-reduced-motion: reduce) { .card.is-new { animation:none; } }
+  .av { position:relative; width:48px; height:48px; border-radius:50%; flex:none; display:grid; place-items:center; color:#fff; font-weight:700; font-size:16px; overflow:hidden; }
+  .av img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+  .body { min-width:0; flex:1; }
+  .top { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+  .name { font-weight:650; font-size:16px; color:var(--text); text-decoration:none; }
+  .name:hover { color:var(--primary); text-decoration:underline; }
+  .headline { color:var(--text); font-size:14px; }
+  .why { font-size:13px; margin-top:6px; padding:6px 10px; background:var(--primary-soft); border-radius:8px; color:var(--text); }
+  .snip { color:var(--muted); font-size:13px; margin-top:6px; }
+  .chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; align-items:center; }
+  .chip { display:inline-flex; align-items:center; gap:4px; font-size:11.5px; padding:1px 9px; border:1px solid var(--border); border-radius:99px; color:var(--muted); }
+  .chip.new { color:var(--primary); border-color:var(--primary); font-weight:600; }
+  .chip.done { color:var(--success); border-color:var(--success); background:var(--success-soft); font-weight:600; }
+  .score { flex:none; font-weight:700; font-size:14px; padding:3px 11px; border-radius:99px; white-space:nowrap; }
+  .s-high { background:var(--success-soft); color:var(--success); }
+  .s-mid { background:var(--primary-soft); color:var(--primary); }
+  .s-low { background:var(--warning-soft); color:var(--warning); }
+  .actions { display:flex; align-items:center; gap:10px; margin-top:10px; }
+  .rv { display:inline-flex; align-items:center; gap:7px; cursor:pointer; font-size:13px; color:var(--text); padding:4px 11px 4px 8px; border:1px solid var(--border); border-radius:99px; user-select:none; }
+  .rv input { accent-color:var(--success); width:16px; height:16px; margin:0; cursor:pointer; }
+  .rv:has(input:checked) { border-color:var(--success); background:var(--success-soft); color:var(--success); font-weight:600; }
+  .del { margin-left:auto; display:inline-flex; align-items:center; gap:5px; background:transparent; color:var(--muted); border:1px solid transparent; font-weight:500; font-size:13px; padding:4px 10px; }
+  .del:hover:not(:disabled) { color:var(--danger); background:var(--danger-soft); filter:none; }
+  .del svg, .rv svg { width:15px; height:15px; }
+
+  .more { display:flex; align-items:center; justify-content:space-between; gap:16px; background:var(--card); border:1px dashed var(--primary); border-radius:14px; padding:16px 18px; margin-top:6px; flex-wrap:wrap; }
+  .more p { margin:0; font-size:14px; }
+  .more small { color:var(--muted); display:block; }
+  .more.done { border-color:var(--border); border-style:solid; color:var(--muted); font-size:14px; }
+
+  .hint { margin:0; color:var(--muted); font-size:12.5px; }
+  #removedList { display:flex; flex-direction:column; gap:6px; max-height:220px; overflow:auto; }
+  #removedList .item { display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:13px; padding:5px 0; border-bottom:1px solid var(--border); }
+  #removedList .item span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  #removedCount { font-weight:400; color:var(--muted); }
+  .toast { position:fixed; left:50%; bottom:24px; transform:translateX(-50%); background:#1a2133; color:#fff; padding:10px 14px; border-radius:10px; display:flex; gap:14px; align-items:center; box-shadow:0 8px 24px rgba(0,0,0,.25); z-index:10; font-size:14px; max-width:92vw; }
+  .toast button { background:none; border:0; color:#aebdf5; padding:0; font-weight:700; cursor:pointer; }
+  .tip { margin:0 0 12px; padding:8px 12px; border-radius:10px; background:var(--warning-soft); color:var(--warning); font-size:12.5px; line-height:1.45; }
+  .tip b { font-weight:700; }
+  .chip.warn { color:var(--warning); border-color:var(--warning); background:var(--warning-soft); font-weight:600; }
+  .ghost.sm { padding:4px 11px; font-size:12.5px; }
+  .nophoto { font-size:12.5px; color:var(--muted); }
+  .tools { flex-wrap:wrap; justify-content:flex-end; }
+
+  /* Printing: only #printRoot is shown, laid out as clean profile sheets. */
+  #printRoot { display:none; }
+  @media print {
+    @page { margin:14mm; }
+    html, body { height:auto !important; overflow:visible !important; background:#fff !important; color:#14192b !important; }
+    .nav, .shell, .toast { display:none !important; }
+    #printRoot { display:block; font:13px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+    #printRoot * { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    .pp-head { display:flex; justify-content:space-between; align-items:baseline; border-bottom:2px solid #3558d8; padding-bottom:6px; margin-bottom:16px; font-size:12px; color:#555; }
+    .pp-head b { font-size:20px; color:#2f4fc4; letter-spacing:-.01em; }
+    .pp { break-inside:avoid; page-break-inside:avoid; border:1px solid #cfd6e4; border-radius:12px; padding:18px; margin-bottom:16px; }
+    .pp-top { display:flex; gap:16px; align-items:center; }
+    .pp-av { position:relative; width:72px; height:72px; border-radius:50%; flex:none; display:grid; place-items:center; color:#fff; font-weight:700; font-size:24px; overflow:hidden; }
+    .pp-av img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+    .pp-id { flex:1; min-width:0; }
+    .pp-id h2 { margin:0; font-size:22px; line-height:1.2; }
+    .pp-id p { margin:2px 0 0; font-size:14px; color:#333; }
+    .pp-score { flex:none; font-weight:700; font-size:16px; padding:5px 14px; border-radius:99px; background:#e3f6ee; color:#12805c; border:1px solid #12805c; }
+    .pp-why { margin:14px 0 0; padding:10px 12px; background:#eaf0ff; border-radius:8px; }
+    .pp-why small, .pp h4 { display:block; text-transform:uppercase; letter-spacing:.06em; font-size:10.5px; color:#667085; margin:0 0 3px; }
+    .pp h4 { margin-top:14px; }
+    .pp p.body { margin:0; }
+    .pp table { width:100%; border-collapse:collapse; margin-top:4px; font-size:12.5px; }
+    .pp td { padding:5px 0; border-top:1px solid #e3e7ee; vertical-align:top; }
+    .pp td:first-child { width:130px; color:#667085; }
+    .pp .url { word-break:break-all; }
+    .pp-notes { height:90px; border:1px dashed #b8c1d4; border-radius:8px; margin-top:4px; }
+    .pp-foot { margin-top:6px; font-size:10.5px; color:#8a93a6; }
+  }
+
+  @media (max-width:860px) {
+    body { overflow:auto; }
+    .shell { display:block; height:auto; }
+    aside, main { height:auto; overflow:visible; display:block; padding:16px; }
+    .scroll { overflow:visible; }
+    .side-foot { position:sticky; bottom:0; padding:10px 0; background:var(--bg); z-index:4; }
+    #results { min-height:0; }
+    .nav-bar { width:calc(100% - 32px); padding:0 14px; border-radius:14px; }
+    .nav-right { display:none; }
+    .brand b { font-size:22px; }
+    .mark { width:38px; height:38px; }
+  }
+  @media (max-width:520px) { .card { flex-direction:column; } .top { flex-direction:column; } }
+</style>
+</head>
+<body>
+<nav class="nav"><div class="nav-bar">
+  <div></div>
+  <div class="brand">
+    <span class="mark" id="mark" aria-hidden="true">
+      <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M16.00 12.60L16.00 3.00M17.70 13.06L20.75 7.77M18.94 14.30L26.39 10.00M19.40 16.00L26.00 16.00M18.94 17.70L27.69 22.75M17.70 18.94L20.50 23.79M16.00 19.40L16.00 28.50M14.30 18.94L11.25 24.23M13.06 17.70L4.74 22.50M12.60 16.00L6.00 16.00M13.06 14.30L5.61 10.00M14.30 13.06L11.50 8.21"/></svg>
+    </span>
+    <b>Talent<span>Hunt</span></b>
+  </div>
+  <div class="nav-right"><span class="pill" id="navStat" hidden></span></div>
+</div></nav>
+<div class="shell">
+  <aside>
+    <div class="side-scroll scroll">
+      <div class="side-inner">
+        <section class="panel">
+          <div class="ph"><span class="ico" aria-hidden="true">✎</span><h2>Paste a job description</h2></div>
+          <textarea id="jd" rows="4" placeholder="Paste the whole JD and AI fills in the search for you" aria-label="Job description"></textarea>
+          <button type="button" id="jdgo" class="soft">Analyze JD &amp; search</button>
+        </section>
+        <div class="or"><span>or search manually</span></div>
+        <form id="form" class="panel">
+          <div class="ph"><span class="ico" aria-hidden="true">⌕</span><h2>Search</h2></div>
+          <div class="f"><label for="role">Role *</label><input id="role" required placeholder="e.g. Java Developer"></div>
+          <div class="f"><label for="extra">Skills / keywords</label><input id="extra" placeholder="e.g. Spring Boot, AWS"></div>
+          <div class="f"><label for="location">Location</label><input id="location" value="United States" placeholder="e.g. Texas, USA"></div>
+          <div class="f"><label for="minExp">Experience (years)</label>
+            <div class="pair"><input id="minExp" type="number" min="0" max="40" placeholder="2" aria-label="Minimum years"><i>to</i><input id="maxExp" type="number" min="0" max="40" placeholder="5" aria-label="Maximum years"></div></div>
+          <div class="row">
+            <div class="f"><label for="visa">Work authorization</label>
+              <select id="visa"><option value="">Any</option><option>H1B</option><option>Green Card</option><option>US Citizen</option><option>OPT</option><option>STEM OPT</option><option>H4 EAD</option><option>TN Visa</option><option>EAD</option></select></div>
+            <div class="f"><label for="source">Source</label>
+              <select id="source"><option value="all">All</option><option value="linkedin">LinkedIn</option><option value="kaggle">Kaggle</option></select></div>
+          </div>
+          <div class="match">
+            <div class="f"><label for="limit">Profiles (N)</label><input id="limit" type="number" min="1" max="100" value="15"></div>
+            <div class="f slider"><div class="lab"><label for="minScore">Min match</label><output id="minScoreVal" for="minScore">75%</output></div>
+              <input id="minScore" type="range" min="50" max="100" step="5" value="75"></div>
+          </div>
+        </form>
+        <section class="panel" id="removedPanel" hidden>
+          <div class="ph"><span class="ico" aria-hidden="true">⊘</span><h2>Removed people <span id="removedCount"></span></h2></div>
+          <p class="hint">Hidden from every search and never scored again. Restore anyone removed by mistake.</p>
+          <div id="removedList"></div>
+          <button type="button" class="ghost" id="restoreAll">Restore all</button>
+        </section>
+      </div>
+    </div>
+    <div class="side-foot"><button id="go" type="submit" form="form">Search</button><button type="button" id="clear" class="ghost" title="Clear the search, job description and results">Clear</button></div>
+  </aside>
+  <main>
+    <div class="main-inner">
+      <div id="status" role="status" aria-live="polite"></div>
+      <div class="main-scroll scroll">
+        <div id="loader" class="loader" hidden><span class="glyph" aria-hidden="true"></span><span><span class="msg"></span><span class="secs"></span><span class="detail"></span></span></div>
+        <div id="results"><div class="empty">
+          <div class="art" aria-hidden="true">✻</div>
+          <h3>Find your next hire</h3>
+          <p>Paste a job description or fill in the search. Choose how many profiles you want and the minimum match.</p>
+          <ol class="steps"><li><b>1</b>Search or paste a JD</li><li><b>2</b>AI scores each profile against the job</li><li><b>3</b>Review, remove, or search for more</li></ol>
+        </div></div>
+      </div>
+    </div>
+  </main>
+</div>
+<div id="toast" class="toast" role="status" hidden></div>
+<div id="printRoot" aria-hidden="true"></div>
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+// ---- Loading indicator: spinning glyph + rotating status words, like the Claude CLI -------
+const STAGES = {
+  jd: ['Reading the job description', 'Brainstorming keywords', 'Pondering the role', 'Untangling requirements', 'Distilling skills'],
+  first: ['Searching', 'Scouring profiles', 'Digging through results', 'Ranking candidates', 'Weighing skills', 'Hold on a minute', 'Comparing experience', 'Brainstorming fit', 'Wait a minute', 'Sizing up candidates'],
+  more: ['Researching', 'Trying other titles', 'Digging deeper', 'Finding new people', 'Weighing skills', 'Hold on a minute', 'Comparing experience', 'Wait a minute'],
+  sort: ['Wait, we’re sorting everything for you, to make your work easier'],
+};
+const GLYPHS = ['✻', '✽', '✶', '✳', '✢', '·'];
+const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+let timers = [];
+function startLoader(stage, where = 'above') {
+  stopLoader();
+  const box = $('loader'), words = STAGES[stage], t0 = Date.now();
+  let g = 0, w = Math.floor(Math.random() * words.length);
+  const draw = () => {
+    box.querySelector('.glyph').textContent = GLYPHS[g++ % GLYPHS.length];
+    box.querySelector('.secs').textContent = ` (${Math.floor((Date.now() - t0) / 1000)}s)`;
+  };
+  const word = () => { box.querySelector('.msg').textContent = words[w++ % words.length] + (stage === 'sort' ? '' : '…'); };
+  // Fresh searches hide the list; "search more" keeps it and shows the loader underneath.
+  if (where === 'below') { $('results').after(box); box.classList.add('below'); }
+  else { $('results').before(box); box.classList.remove('below'); }
+  box.hidden = false; box.querySelector('.detail').textContent = '';
+  draw(); word();
+  timers = [setInterval(draw, reducedMotion ? 1000 : 160), setInterval(word, 2200)];
+  $('mark').classList.add('busy');
+}
+function stopLoader() { timers.forEach(clearInterval); timers = []; $('loader').hidden = true; $('mark').classList.remove('busy'); }
+
+// ---- State -------------------------------------------------------------------------------------
+const S = { list: [], removed: [], params: null, state: null, requested: 15, minScore: 75, exhausted: false, unranked: false, rankError: '', relaxed: [], screened: 0, searches: 0, searched: false, filter: 'all', busy: false, photoCredits: 0 };
+
+// "Reviewed" survives reloads and later searches (keyed by profile link). Storage can be blocked, so it's best-effort.
+let reviewed = new Set();
+try { reviewed = new Set(JSON.parse(localStorage.getItem('rf.reviewed') || '[]')); } catch { /* ignore */ }
+const saveReviewed = () => { try { localStorage.setItem('rf.reviewed', JSON.stringify([...reviewed].slice(-5000))); } catch { /* ignore */ } };
+
+// Removed people are hidden from every future search: saved here, and sent to the server as
+// `exclude` keys so they are never fetched or scored again. They stay restorable from the sidebar panel.
+let removedStore = {};
+try { removedStore = JSON.parse(localStorage.getItem('rf.removed') || '{}'); } catch { /* ignore */ }
+const saveRemoved = () => { try { localStorage.setItem('rf.removed', JSON.stringify(removedStore)); } catch { /* ignore */ } };
+const excludedKeys = () => Object.entries(removedStore).flatMap(([link, r]) => [link, ...(r.keys || [])]);
+function renderRemovedPanel() {
+  const entries = Object.entries(removedStore).sort((a, b) => b[1].at - a[1].at);
+  $('removedPanel').hidden = !entries.length;
+  $('removedCount').textContent = entries.length ? '(' + entries.length + ')' : '';
+  $('removedList').innerHTML = entries.map(([link, r]) =>
+    '<div class="item"><span title="' + esc(r.headline || '') + '">' + esc(r.name) + '</span><button type="button" class="linkbtn" data-restore="' + esc(link) + '">Restore</button></div>').join('');
+}
+function unremove(link) {
+  delete removedStore[link];
+  saveRemoved();
+  const i = S.removed.findIndex((x) => x.item.link === link);
+  if (i >= 0) { const [{ item }] = S.removed.splice(i, 1); S.list.push(item); sortList(); }
+  renderRemovedPanel();
+  render();
+}
+$('removedList').addEventListener('click', (e) => { const l = e.target.dataset.restore; if (l) unremove(l); });
+$('restoreAll').addEventListener('click', () => Object.keys(removedStore).forEach((l) => unremove(l)));
+
+const initials = (name) => (String(name).match(/[A-Za-z0-9]+/g) || ['?']).slice(0, 2).map((w) => w[0].toUpperCase()).join('');
+const hue = (s) => [...String(s)].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 7);
+const scoreClass = (n) => (n >= 90 ? 's-high' : n >= 75 ? 's-mid' : 's-low');
+const ICON_TRASH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14M10 11v6M14 11v6"/></svg>';
+
+renderRemovedPanel();
+
+// ---- Rendering -----------------------------------------------------------------------------------
+function statusText() {
+  if (!S.searched) return '';
+  const rel = S.relaxed.length ? ` · relaxed: ${S.relaxed.join(', ')}` : '';
+  if (S.unranked) return `Showing ${S.list.length} unranked results. AI ranking is unavailable (${S.rankError}), so the ${S.minScore}% minimum couldn't be applied${rel}`;
+  const effort = `screened ${S.screened} profiles across ${S.searches} searches`;
+  const n = S.list.length;
+  if (!n && !S.screened) return 'No profiles found. Try broader terms.';
+  if (!n) return `None of the ${S.screened} profiles screened reached ${S.minScore}% match. Try Search more, broaden skills or location, or lower the minimum.${rel}`;
+  const head = n >= S.requested ? `Top ${n} profiles at ${S.minScore}%+ match` : `Showing ${n} of ${S.requested} profiles at ${S.minScore}%+ match`;
+  return `${head} (${effort})${rel}`;
+}
+
+function cardHtml(r) {
+  const done = reviewed.has(r.link);
+  const av = `<span class="av" style="background:hsl(${hue(r.name)} 45% 42%)">${esc(initials(r.name))}${r.image ? `<img src="${esc(r.image)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">` : ''}</span>`;
+  const rank = S.list.indexOf(r) + 1;
+  return `
+  <article class="card${done ? ' is-reviewed' : ''}${r.isNew ? ' is-new' : ''}" data-link="${esc(r.link)}">
+    ${av}
+    <div class="body">
+      <div class="top">
+        <div>
+          <a class="name" href="${esc(r.link)}" target="_blank" rel="noopener noreferrer">${esc(r.name)}</a>
+          ${r.headline ? `<div class="headline">${esc(r.headline)}</div>` : ''}
+        </div>
+        ${r.score != null ? `<span class="score ${scoreClass(r.score)}" title="AI match against the job">${r.score}% match</span>` : ''}
+      </div>
+      ${r.reason ? `<div class="why">${esc(r.reason)}</div>` : ''}
+      <div class="snip">${esc(r.snippet)}</div>
+      <div class="chips">
+        <span class="chip">#${rank}</span><span class="chip">${esc(r.source)}</span>
+        ${r.isNew ? '<span class="chip new">New</span>' : ''}${r.relaxed?.length ? `<span class="chip" title="Matched after dropping: ${esc(r.relaxed.join(', '))}">partial match</span>` : ''}${done ? '<span class="chip done">✓ Reviewed</span>' : ''}
+      </div>
+      <div class="actions">
+        <label class="rv"><input type="checkbox" data-act="review"${done ? ' checked' : ''}> Reviewed</label>
+        ${photosOn && !r.image ? (r.photoMissing ? '<span class="nophoto">No photo found</span>' : '<button type="button" class="ghost sm" data-act="photo" title="Uses 1 search credit">View photo</button>') : ''}
+        <button type="button" class="ghost sm" data-act="print" aria-label="Print profile of ${esc(r.name)}">Print</button>
+        <button type="button" class="del" data-act="delete" aria-label="Remove ${esc(r.name)} from the list">${ICON_TRASH} Remove</button>
+      </div>
+    </div>
+  </article>`;
+}
+
+function render() {
+  saveSession();
+  $('status').className = '';
+  $('status').textContent = statusText();
+  if (!S.searched) return;
+  const total = S.list.length, doneN = S.list.filter((r) => reviewed.has(r.link)).length;
+  $('navStat').hidden = !S.searched;
+  $('navStat').textContent = `${total} shown · ${doneN} reviewed`;
+  const shown = S.list.filter((r) => (S.filter === 'todo' ? !reviewed.has(r.link) : S.filter === 'done' ? reviewed.has(r.link) : true));
+  const seg = (key, label, n) => `<button type="button" data-filter="${key}" aria-pressed="${S.filter === key}">${label} <span>${n}</span></button>`;
+  const toolbar = total || S.removed.length ? `
+    <div class="toolbar">
+      <div class="seg" role="group" aria-label="Filter candidates">${seg('all', 'All', total)}${seg('todo', 'To review', total - doneN)}${seg('done', 'Reviewed', doneN)}</div>
+      <div class="tools">
+        ${S.removed.length ? `<span>${S.removed.length} removed · <button type="button" class="linkbtn" data-act="restore-all">Restore</button></span>` : ''}
+        <label class="rv" title="Adds a View photo button to every card. Each photo you view costs 1 search credit."><input type="checkbox" data-act="photos"${photosOn ? ' checked' : ''}> Photos</label>
+        ${photosOn ? `<span class="chip warn" title="Photos are fetched one profile at a time, only when you click View photo">1 credit per photo${S.photoCredits ? ` · ${S.photoCredits} used` : ''}</span>` : ''}
+        ${total ? '<button type="button" class="ghost" id="printAll">Print list</button><button type="button" class="ghost" id="csv">Download CSV</button>' : ''}
+      </div>
+    </div>` : '';
+  let list = shown.map(cardHtml).join('');
+  if (!shown.length) {
+    list = total
+      ? `<div class="empty"><b>${S.filter === 'todo' ? 'Everything is reviewed' : 'Nothing reviewed yet'}</b>Switch the filter above to see the others.</div>`
+      : '';
+  }
+  const missing = S.requested - total;
+  let footer = '';
+  if (!S.unranked && missing > 0) {
+    footer = S.exhausted
+      ? '<div class="more done">The AI has run out of new ways to search for this role. Try broader skills or location, or lower the minimum match.</div>'
+      : `<div class="more"><p><b>${total} of ${S.requested}</b> profiles so far<small>Search more looks for ${missing} more using other job titles and skill pairings. Only new people are added.</small></p><button type="button" id="more">Search more</button></div>`;
+  }
+  const tip = total ? '<p class="tip"><b>Tip:</b> open only a few profiles at a time. Opening many LinkedIn profiles quickly can get an account restricted. Use the scores, reasons and Print sheets to decide who to open.</p>' : '';
+  $('results').innerHTML = toolbar + tip + list + footer;
+}
+
+function toast(msg, undo) {
+  const t = $('toast');
+  t.innerHTML = `<span>${esc(msg)}</span>${undo ? '<button type="button" data-act="undo">Undo</button>' : ''}`;
+  t.hidden = false;
+  clearTimeout(toast.timer);
+  toast.timer = setTimeout(() => { t.hidden = true; }, 6000);
+}
+
+// ---- Card actions ----------------------------------------------------------------------------------
+$('results').addEventListener('change', (e) => {
+  if (e.target.dataset.act === 'photos') {
+    if (e.target.checked && !confirm('Photos are fetched one profile at a time, and each photo you view uses 1 search credit.\n\nTurn photos on?')) { e.target.checked = false; return; }
+    photosOn = e.target.checked;
+    try { localStorage.setItem('rf.photos', photosOn ? '1' : '0'); } catch { /* ignore */ }
+    return render();
+  }
+  if (e.target.dataset.act !== 'review') return;
+  const link = e.target.closest('.card').dataset.link;
+  e.target.checked ? reviewed.add(link) : reviewed.delete(link);
+  saveReviewed();
+  render();
+});
+$('results').addEventListener('click', (e) => {
+  const filter = e.target.closest('[data-filter]');
+  if (filter) { S.filter = filter.dataset.filter; return render(); }
+  if (e.target.closest('#more')) return runMatch('more');
+  if (e.target.closest('#printAll')) return printProfiles(S.list.filter((r) => (S.filter === 'todo' ? !reviewed.has(r.link) : S.filter === 'done' ? reviewed.has(r.link) : true)));
+  if (e.target.closest('#csv')) return downloadCsv();
+  const act = e.target.closest('[data-act]')?.dataset.act;
+  if (act === 'photo') return viewPhoto(e.target.closest('[data-act=photo]'));
+  if (act === 'print') return printProfiles([S.list.find((r) => r.link === e.target.closest('.card').dataset.link)].filter(Boolean));
+  if (act === 'delete') {
+    const link = e.target.closest('.card').dataset.link;
+    const i = S.list.findIndex((r) => r.link === link);
+    const [gone] = S.list.splice(i, 1);
+    S.removed.push({ item: gone, index: i });
+    removedStore[gone.link] = { name: gone.name, headline: gone.headline || '', keys: gone.keys || [], at: Date.now() };
+    saveRemoved(); renderRemovedPanel();
+    render();
+    toast(`Removed ${gone.name}`, true);
+  } else if (act === 'restore-all') {
+    S.removed.forEach(({ item }) => { S.list.push(item); delete removedStore[item.link]; });
+    S.removed = [];
+    saveRemoved(); renderRemovedPanel();
+    sortList();
+    render();
+  }
+});
+$('toast').addEventListener('click', (e) => {
+  if (e.target.dataset.act !== 'undo') return;
+  const last = S.removed.pop();
+  if (last) { S.list.splice(Math.min(last.index, S.list.length), 0, last.item); delete removedStore[last.item.link]; saveRemoved(); renderRemovedPanel(); render(); }
+  $('toast').hidden = true;
+});
+
+// ---- CSV ---------------------------------------------------------------------------------------------
+let photosOn = false;
+try { photosOn = localStorage.getItem('rf.photos') === '1'; } catch { /* ignore */ }
+
+// One profile, only when its button is clicked. The server answers { cached: true } for a repeat, which is free.
+async function viewPhoto(btn) {
+  const link = btn.closest('.card').dataset.link;
+  const item = S.list.find((r) => r.link === link);
+  if (!item) return;
+  btn.disabled = true; btn.textContent = 'Loading…';
+  try {
+    const res = await fetch('/api/photo?link=' + encodeURIComponent(link));
+    const d = await res.json();
+    if (!res.ok) throw new Error(d.error);
+    if (!d.cached) S.photoCredits = (S.photoCredits || 0) + 1;
+    if (d.found) item.image = d.url; else item.photoMissing = true;
+  } catch (err) { toast('Could not load the photo: ' + err.message); }
+  render();
+}
+
+// Browser print (Save as PDF) of clean profile sheets: one profile, or the whole visible list.
+function printProfiles(items) {
+  if (!items.length) return;
+  const date = new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+  const crit = S.params ? [S.params.role, S.params.extra, S.params.location].filter(Boolean).join(' · ') : '';
+  const sheet = (r) => `
+    <section class="pp">
+      <div class="pp-top">
+        <span class="pp-av" style="background:hsl(${hue(r.name)} 45% 42%)">${esc(initials(r.name))}${r.image ? `<img src="${esc(r.image)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">` : ''}</span>
+        <div class="pp-id"><h2>${esc(r.name)}</h2>${r.headline ? `<p>${esc(r.headline)}</p>` : ''}</div>
+        ${r.score != null ? `<span class="pp-score">${r.score}% match</span>` : ''}
+      </div>
+      ${r.reason ? `<div class="pp-why"><small>Why this match</small>${esc(r.reason)}</div>` : ''}
+      ${r.snippet ? `<h4>Profile summary</h4><p class="body">${esc(r.snippet)}</p>` : ''}
+      <h4>Details</h4>
+      <table>
+        <tr><td>Rank in search</td><td>#${S.list.indexOf(r) + 1} of ${S.list.length}</td></tr>
+        <tr><td>Source</td><td>${esc(r.source)}</td></tr>
+        <tr><td>Profile link</td><td class="url">${esc(r.link)}</td></tr>
+        <tr><td>Reviewed</td><td>${reviewed.has(r.link) ? 'Yes' : 'No'}</td></tr>
+      </table>
+      <h4>Recruiter notes</h4><div class="pp-notes"></div>
+      <div class="pp-foot">Summary from public search results. Open the profile link for the full, current profile.</div>
+    </section>`;
+  $('printRoot').innerHTML = `<div class="pp-head"><b>TalentHunt</b><span>${esc(crit ? crit + ' · ' : '')}${esc(date)}</span></div>` + items.map(sheet).join('');
+  window.print();
+}
+addEventListener('afterprint', () => { $('printRoot').innerHTML = ''; });
+const csvCell = (v) => '"' + String(v ?? '').replace(/"/g, '""') + '"';
+function downloadCsv() {
+  const cols = ['rank', 'name', 'headline', 'score', 'reviewed', 'reason', 'source', 'link', 'snippet'];
+  const rows = S.list.map((r, i) => [i + 1, r.name, r.headline, r.score, reviewed.has(r.link) ? 'yes' : 'no', r.reason, r.source, r.link, r.snippet]);
+  const csv = [cols, ...rows].map((row) => row.map(csvCell).join(',')).join('\r\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }));
+  a.download = 'candidates-' + new Date().toISOString().slice(0, 10) + '.csv';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+// ---- Talking to the server ------------------------------------------------------------------------------
+const sortList = () => S.list.sort((a, b) => (b.score ?? -1) - (a.score ?? -1));
+const fail = (err) => { stopLoader(); if (!S.searched) $('results').innerHTML = EMPTY; render(); $('status').className = 'err'; $('status').textContent = err.message; };
+
+// The server streams newline-delimited JSON: progress lines while it works, then one result.
+async function streamMatch(body) {
+  const res = await fetch('/api/match', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  if (!res.ok) throw new Error((await res.json()).error);
+  const reader = res.body.getReader(), dec = new TextDecoder();
+  let buf = '', final = null;
+  const handle = (line) => {
+    if (!line.trim()) return;
+    const m = JSON.parse(line);
+    if (m.type === 'progress') $('loader').querySelector('.detail').textContent = `${m.text} · ${m.found} of ${m.requested} found · ${m.screened} screened`;
+    else if (m.type === 'error') throw new Error(m.error);
+    else final = m;
+  };
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    const lines = buf.split('\n'); buf = lines.pop();
+    lines.forEach(handle);
+  }
+  handle(buf);
+  if (!final) throw new Error('The search ended without a result, please try again');
+  return final;
+}
+
+async function runMatch(mode) {
+  if (S.busy) return;
+  S.busy = true;
+  $('go').disabled = true; $('jdgo').disabled = true;
+  const more = mode === 'more';
+  if (more) { const b = $('more'); if (b) b.disabled = true; }
+  $('status').className = ''; if (!more) $('status').textContent = '';
+  if (!more) { $('results').innerHTML = ''; }
+  startLoader(more ? 'more' : 'first', more ? 'below' : 'above');
+  try {
+    const final = await streamMatch({ ...S.params, mode, state: S.state, exclude: excludedKeys(), need: Math.max(1, S.requested - S.list.length) });
+    final.results = final.results.filter((r) => !removedStore[r.link]);
+    S.state = final.state; S.exhausted = !!final.exhausted; S.unranked = !!final.unranked; S.rankError = final.rankError || '';
+    S.screened += final.screened; S.searches += final.searches;
+    if (!more) {
+      S.relaxed = final.relaxed || []; S.requested = final.requested; S.minScore = final.minScore; S.searched = true;
+      S.list = final.results;
+    } else {
+      S.list.forEach((r) => { delete r.isNew; });
+      const have = new Set([...S.list, ...S.removed.map((x) => x.item)].map((r) => r.link));
+      S.list.push(...final.results.filter((r) => !have.has(r.link)).map((r) => ({ ...r, isNew: true })));
+      // Sorting is instant, but say so: the list is about to reshuffle around the new people.
+      startLoader('sort', 'below');
+      await new Promise((r) => setTimeout(r, 1300));
+      sortList();
+    }
+    stopLoader();
+    render();
+  } catch (err) { fail(err); }
+  finally { S.busy = false; $('go').disabled = false; $('jdgo').disabled = false; }
+}
+
+$('form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  S.params = Object.fromEntries(['role', 'location', 'minExp', 'maxExp', 'visa', 'extra', 'source', 'limit', 'minScore'].map((k) => [k, $(k).value]));
+  S.params.jd = $('jd').value;
+  Object.assign(S, { list: [], removed: [], state: null, exhausted: false, unranked: false, relaxed: [], screened: 0, searches: 0, searched: false, filter: 'all', requested: +S.params.limit || 15, minScore: +S.params.minScore });
+  $('toast').hidden = true;
+  runMatch('first');
+});
+
+$('jdgo').addEventListener('click', async () => {
+  if (S.busy) return;
+  S.busy = true; $('jdgo').disabled = true; $('go').disabled = true;
+  $('status').className = ''; $('status').textContent = ''; $('results').innerHTML = '';
+  startLoader('jd');
+  try {
+    const res = await fetch('/api/parse-jd', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: $('jd').value }) });
+    const f = await res.json();
+    if (!res.ok) throw new Error(f.error);
+    $('role').value = f.role;
+    $('minExp').value = f.minExp ?? '';
+    $('maxExp').value = f.maxExp ?? '';
+    if (f.location) $('location').value = f.location;
+    $('visa').value = [...$('visa').options].some((o) => o.value === f.visa) ? f.visa : '';
+    $('extra').value = f.keywords.join(' ');
+    S.busy = false;
+    $('form').requestSubmit();
+  } catch (err) { S.busy = false; $('jdgo').disabled = false; $('go').disabled = false; fail(err); }
+});
+
+// Remembered so a failed first search can put the empty state back.
+const EMPTY = $('results').innerHTML;
+$('minScore').addEventListener('input', () => { $('minScoreVal').textContent = $('minScore').value + '%'; });
+
+// ---- Session persistence: everything survives a refresh until the user presses Clear ------------
+const FIELD_IDS = ['jd', 'role', 'extra', 'location', 'minExp', 'maxExp', 'visa', 'source', 'limit', 'minScore'];
+const DEFAULTS = Object.fromEntries(FIELD_IDS.map((k) => [k, $(k).value]));
+const SESSION_KEY = 'rf.session';
+const PERSISTED = ['list', 'removed', 'params', 'state', 'requested', 'minScore', 'exhausted', 'unranked', 'rankError', 'relaxed', 'screened', 'searches', 'searched', 'filter', 'photoCredits'];
+
+function saveSession() {
+  try {
+    const snap = { fields: Object.fromEntries(FIELD_IDS.map((k) => [k, $(k).value])), S: {} };
+    PERSISTED.forEach((k) => { snap.S[k] = S[k]; });
+    snap.S.list = S.list.map(({ isNew, ...r }) => r); // the "New" badge is per-visit
+    // Mid-search the live state is half-reset; keep the last good results rather than overwrite them.
+    if (S.busy) { const prev = JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); if (prev?.S) snap.S = prev.S; }
+    localStorage.setItem(SESSION_KEY, JSON.stringify(snap));
+  } catch { /* storage full or blocked: the app still works, it just won't survive a refresh */ }
+}
+function restoreSession() {
+  let snap;
+  try { snap = JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); } catch { snap = null; }
+  if (!snap) return;
+  for (const k of FIELD_IDS) if (snap.fields?.[k] != null) $(k).value = snap.fields[k];
+  $('minScoreVal').textContent = $('minScore').value + '%';
+  if (snap.S?.searched) {
+    PERSISTED.forEach((k) => { if (snap.S[k] !== undefined) S[k] = snap.S[k]; });
+    // Anything removed since this session was saved must stay out of the restored list.
+    S.list = S.list.filter((r) => !removedStore[r.link] || S.removed.some((x) => x.item.link === r.link));
+    render();
+  }
+}
+function clearAll() {
+  if (S.busy) return;
+  if (S.searched && S.list.length && !confirm('Clear the current search and results? Reviewed and removed people are kept.')) return;
+  try { localStorage.removeItem(SESSION_KEY); } catch { /* ignore */ }
+  Object.assign(S, { list: [], removed: [], params: null, state: null, requested: 15, minScore: 75, exhausted: false, unranked: false, rankError: '', relaxed: [], screened: 0, searches: 0, searched: false, filter: 'all', photoCredits: 0 });
+  FIELD_IDS.forEach((k) => { $(k).value = DEFAULTS[k]; });
+  $('minScoreVal').textContent = $('minScore').value + '%';
+  stopLoader();
+  $('results').innerHTML = EMPTY;
+  $('status').className = ''; $('status').textContent = '';
+  $('navStat').hidden = true; $('toast').hidden = true;
+}
+$('clear').addEventListener('click', clearAll);
+let saveTimer;
+const saveSoon = () => { clearTimeout(saveTimer); saveTimer = setTimeout(saveSession, 300); };
+document.addEventListener('input', saveSoon);
+document.addEventListener('change', saveSoon);
+addEventListener('pagehide', saveSession);
+restoreSession();
+</script>
+</body>
+</html>
